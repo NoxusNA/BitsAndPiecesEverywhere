@@ -36,14 +36,14 @@ function NAHeimerMenu()
 	Menu.NewTree("NAHeimerHarass", "Harass", function ()
 		Menu.Checkbox("Harass.CastQ","Cast Q",false)
 		Menu.Slider("Harass.CastQMinMana", "Q % Min. Mana", 1, 0, 100, 1)
-		Menu.Slider("Harass.CastQMinRange", "Q Min. Range", 1, 0, 100, 10)
+		Menu.Slider("Harass.CastQMinRange", "Q Min. Range", 450, 10, 525, 5)
 		Menu.Checkbox("Harass.CastW","Cast W",true)
-		Menu.Checkbox("Harass.CastWCC","Cast W on CC Only",true)
-		Menu.Slider("Harass.CastWHC", "W Hit Chance", 0.50, 0.05, 1, 0.05)
-		Menu.Slider("Harass.CastWMinMana", "W % Min. Mana", 25, 1, 100, 1)
+		Menu.Checkbox("Harass.CastWCC","Cast W on CC Only",false)
+		Menu.Slider("Harass.CastWHC", "W Hit Chance", 0.75, 0.05, 1, 0.05)
+		Menu.Slider("Harass.CastWMinMana", "W % Min. Mana", 1, 0, 100, 1)
 		Menu.Checkbox("Harass.CastE","Cast E",true)
-		Menu.Checkbox("Combo.CastECC","Cast E on CC Only",false)
-		Menu.Slider("Harass.CastEMinMana", "E % Min. Mana", 25, 1, 100, 1)
+		Menu.Slider("Harass.CastEHC", "E Hit Chance", 0.75, 0.05, 1, 0.05)
+		Menu.Slider("Harass.CastEMinMana", "E % Min. Mana", 1, 0, 100, 1)
 	end)
 	Menu.NewTree("NAHeimerWave", "Waveclear", function ()
 		Menu.ColoredText("Wave", 0xFFD700FF, true)
@@ -268,7 +268,7 @@ local function AutoRQ()
 		local hero = obj.AsHero
 		if hero and hero.IsTargetable then
 			
-			local targetPos = target:FastPrediction(spells.Q.Delay)
+			local targetPos = hero:FastPrediction(spells.Q.Delay)
 			local predPos = Player.Position:Extended(targetPos,spells.Q.Range)
 			local dist = predPos:Distance(targetPos)
 			
@@ -531,7 +531,16 @@ local function OnNormalPriority()
 
 		-- Harass
 	elseif Orbwalker.GetMode() == "Harass" then
-
+		if Menu.Get("Harass.CastQ") then
+			if spells.Q:IsReady() then
+				local target = Orbwalker.GetTarget() or
+						TS:GetTarget(spells.Q.Range + spells.Q.TurretRange + Player.BoundingRadius, false)
+				if target then
+					CastQ(target, Menu.Get("Harass.CastQMinRange"))
+					return
+				end
+			end
+		end
 		if Menu.Get("Harass.CastE") then
 			if spells.E:IsReady() then
 				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.E.Range + Player.BoundingRadius, true)
