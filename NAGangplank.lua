@@ -207,7 +207,9 @@ end
 
 local function CanKillBarrel(barrel)
 
-	if barrel.Health == 1 then
+	local healthPred = HealthPred.GetHealthPrediction(barrel, spells.Q.Delay)
+
+	if healthPred <= 1 then
 		return true
 	end
 
@@ -307,18 +309,18 @@ local function CastQ(target, checkBarrel)
 			if nearBarrel and IsBarrelChained(nearBarrel) and barrel and IsBarrelChained(nearBarrel) then
 				if CanKillBarrel(nearBarrel) then
 					if spells.Q:Cast(nearBarrel) then
-						return
+						return true
 					end
 				end
 			else
 				if barrel and CanKillBarrel(barrel) then
 					if spells.Q:Cast(barrel) then
-						return
+						return true
 					end
 				else
 					if Player:Distance(target) <= spells.Q.Range and
 							spells.Q:Cast(target) then
-						return
+						return true
 					end
 				end
 			end
@@ -327,9 +329,10 @@ local function CastQ(target, checkBarrel)
 		end
 
 		if Player:Distance(target) <= spells.Q.Range and spells.Q:Cast(target) then
-			return
+			return true
 		end
 	end
+	return false
 end
 
 local function CastW()
@@ -343,10 +346,23 @@ end
 local function CastE(target, hitChance, minBarrels)
 	if spells.E:IsReady() then
 		--if CountBarrelsNearMe() <= minBarrels then
-		if spells.E:CastOnHitChance(target, hitChance) then
-			return
+		if spells.Q:IsReady() then
+			local nearBarrel = GetNearestBarrel()
+			if nearBarrel and Player.Position:Distance(nearBarrel.Position) <= spells.Q.Range then
+				local ePred = Prediction.GetPredictedPosition(target, spells.E, Player.Position)
+				if ePred and ePred.HitChance >= hitChance then
+					if CastQ(nearBarrel,false) and CanKillBarrel(nearBarrel) then
+						if spells.E:Cast(ePred.CastPosition) then
+							return
+						end
+					end
+				end
+			end
+		else
+			if spells.E:CastOnHitChance(target, hitChance) then
+				return
+			end
 		end
-		--end
 	end
 end
 
