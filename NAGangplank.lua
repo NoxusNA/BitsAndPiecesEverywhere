@@ -372,7 +372,7 @@ local function CastELogic(target, hitChance, minBarrels)
 
 		local dist = Player:Distance(target.Position)
 
-		if CountBarrelsNearMe() == 0 then
+		if CountBarrelsNearMe() == 0 and GetBarrelsAmmo() >= 2 then
 			local firstBarrelDist = Player.Position:Extended(target,
 					Player.AttackRange+Player.BoundingRadius)
 			if spells.E:Cast(firstBarrelDist) then
@@ -716,8 +716,8 @@ local function OnNormalPriority()
 
 		if Menu.Get("Harass.CastQ") then
 			if spells.Q:IsReady() then
-				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.Q.Range + Player.BoundingRadius, true)
-				if target and target.Position:Distance(Player.Position) <= (spells.Q.Range + Player.BoundingRadius) then
+				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.E.Range + Player.BoundingRadius, true)
+				if target and target.Position:Distance(Player.Position) <= (spells.E.Range + Player.BoundingRadius) then
 					CastQ(target,Menu.Get("Harass.CastQBarrel"))
 					return
 				end
