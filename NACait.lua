@@ -129,6 +129,10 @@ local function ValidMinion(minion)
 	return minion and minion.IsTargetable and minion.MaxHealth > 6 -- check if not plant or shroom
 end
 
+local function ValidTarget(target)
+	return target and target.IsTargetable and target.MaxHealth > 6 -- check if not plant or shroom
+end
+
 local function GameIsAvailable()
 	return not (Game.IsChatOpen() or Game.IsMinimized() or Player.IsDead or Player.IsRecalling)
 end
@@ -528,7 +532,7 @@ local function OnTick()
 		if Menu.Get("Combo.UseSmart") then
 			local target = Orbwalker.GetTarget() or TS:GetTarget(spells.W.Range + Player.BoundingRadius, true)
 
-			if target then
+			if target and ValidTarget(target) then
 				if spells.W:IsReady() and not IsTargetTrapped(target) then
 					if target.Position:Distance(Player.Position) <= (spells.W.Range + Player.BoundingRadius) and
 							GetNumberTraps() > Menu.Get("Combo.CastWMinTraps") then
@@ -558,7 +562,7 @@ local function OnTick()
 			if Menu.Get("Combo.CastQ") then
 				if spells.Q:IsReady() then
 					local target = Orbwalker.GetTarget() or TS:GetTarget(spells.Q.Range + Player.BoundingRadius, true)
-					if target and target.Position:Distance(Player.Position) <= (spells.Q.Range + Player.BoundingRadius) then
+					if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (spells.Q.Range + Player.BoundingRadius) then
 						CastQ(target, Menu.Get("Combo.CastQHC"))
 					end
 				end
@@ -566,7 +570,7 @@ local function OnTick()
 			if Menu.Get("Combo.CastW") then
 				if spells.W:IsReady() then
 					local target = Orbwalker.GetTarget() or TS:GetTarget(spells.W.Range + Player.BoundingRadius, true)
-					if target and target.Position:Distance(Player.Position) <= (spells.W.Range + Player.BoundingRadius) and
+					if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (spells.W.Range + Player.BoundingRadius) and
 							GetNumberTraps() > Menu.Get("Combo.CastWMinTraps") then
 						CastW(target, Menu.Get("Combo.CastWHC"))
 					end
@@ -575,14 +579,15 @@ local function OnTick()
 			if Menu.Get("Combo.CastE") then
 				if spells.E:IsReady() then
 					local target = Orbwalker.GetTarget() or TS:GetTarget(spells.E.Range + Player.BoundingRadius, true)
-					if target and target.Position:Distance(Player.Position) <= (spells.E.Range + Player.BoundingRadius) then
+					if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (spells.E.Range + Player.BoundingRadius) then
 						CastE(target,Menu.Get("Combo.CastEHC"))
 						return
 					end
 				end
 			end
 			if Menu.Get("Combo.UseGaleforce") then
-				if target.Position:Distance(Player.Position) <= (425 + 750) and
+				local target = Orbwalker.GetTarget() or TS:GetTarget(425 + 750, true)
+				if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (425 + 750) and
 						target.HealthPercent <= Menu.Get("Combo.UseGaleforcePerc")  then
 					UseGaleforce(target)
 				end
