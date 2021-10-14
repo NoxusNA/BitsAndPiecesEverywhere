@@ -35,7 +35,7 @@ function NAApheliosMenu()
 			Menu.Slider("Combo.CastQInfernumHC", "Infernum Hit Chance", 0.60, 0.05, 1, 0.05)
 			Menu.Slider("Combo.CastQInfernumMinMana", "Infernum % Min. Mana", 0, 1, 100, 1)
 			Menu.Checkbox("Combo.CastQCrescendum","Crescendum, The Chakram",true)
-			Menu.Slider("Combo.CastQCrescendumHC", "Crescendum Hit Chance", 0.60, 0.05, 1, 0.05)
+			Menu.Slider("Combo.CastQCrescendumMR", "Crescendum Min. Range", 450, 200, 475, 5)
 			Menu.Slider("Combo.CastQCrescendumMinMana", "Crescendum % Min. Mana", 0, 1, 100, 1)
 		end)
 		Menu.Checkbox("Combo.CastR","Cast R",true)
@@ -63,7 +63,7 @@ function NAApheliosMenu()
 			Menu.Slider("Harass.CastQInfernumHC", "Infernum Hit Chance", 0.60, 0.05, 1, 0.05)
 			Menu.Slider("Harass.CastQInfernumMinMana", "Infernum % Min. Mana", 0, 1, 100, 1)
 			Menu.Checkbox("Harass.CastQCrescendum","Crescendum, The Chakram",true)
-			Menu.Slider("Harass.CastQCrescendumHC", "Crescendum Hit Chance", 0.60, 0.05, 1, 0.05)
+			Menu.Slider("Harass.CastQCrescendumMR", "Crescendum Hit Chance", 0.60, 0.05, 1, 0.05)
 			Menu.Slider("Harass.CastQCrescendumMinMana", "Crescendum % Min. Mana", 0, 1, 100, 1)
 		end)
 	end)
@@ -80,6 +80,7 @@ function NAApheliosMenu()
 	end)
 	Menu.NewTree("NAApheliosMisc", "Misc.", function ()
 		Menu.Checkbox("Misc.CastQGravitumGap","Auto-Cast Q Gravitum on GapClose",true)
+		Menu.Checkbox("Misc.CastQCrescendumGap","Auto-Cast Q Crescendum on GapClose",true)
 		Menu.Checkbox("Misc.ForceAACalibrum","Force AA on Calibrum Enemy",true)
 		Menu.Checkbox("Misc.SwitchSeverum","Auto-Switch Severum on % HP",true)
 		Menu.Slider("Misc.SwitchSeverumHP", "Switch Severum % HP ", 35, 1, 100, 1)
@@ -401,7 +402,10 @@ local function CastQ(target, hitChance)
 				return
 			end
 		elseif weapon == Weapons.CRESCENDUM then
-			if spells.QCrescendum:CastOnHitChance(target, hitChance) then
+			local targetPos = target:FastPrediction(spells.QCrescendum.Delay)
+			local predPos = Player.Position:Extended(targetPos,spells.QCrescendum.Range)
+			local dist = predPos:Distance(targetPos)
+			if dist <= hitChance and spells.QCrescendum:Cast(predPos) then
 				return
 			end
 		end
@@ -621,10 +625,6 @@ local function OnTick()
 	if not GameIsAvailable() then return end
 	--if not Orbwalker.CanCast() then return end
 
-	local gameTime = Game.GetTime()
-	if gameTime < (lastTick + 0.25) then return end
-	lastTick = gameTime
-
 	-- Combo
 	if Orbwalker.GetMode() == "Combo" then
 	
@@ -680,7 +680,7 @@ local function OnTick()
 				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.QCrescendum.Range + Player.BoundingRadius, true)
 				if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (spells.QCrescendum.Range + Player.BoundingRadius)
 						and Player.Mana >= (Menu.Get("Combo.CastQCrescendumMinMana") / 100) * Player.MaxMana then
-					CastQ(target, Menu.Get("Combo.CastQCrescendumHC"))
+					CastQ(target, Menu.Get("Combo.CastQCrescendumMR"))
 				end
 			end
 		end
@@ -751,7 +751,7 @@ local function OnTick()
 				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.QCrescendum.Range + Player.BoundingRadius, true)
 				if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (spells.QCrescendum.Range + Player.BoundingRadius)
 						and Player.Mana >= (Menu.Get("Harass.CastQCrescendumMinMana") / 100) * Player.MaxMana then
-					CastQ(target, Menu.Get("Harass.CastQCrescendumHC"))
+					CastQ(target, Menu.Get("Harass.CastQCrescendumMR"))
 				end
 			end
 		end
@@ -816,12 +816,22 @@ local function OnGapclose(source, dash)
 			end
 		end
 	end
+	if Menu.Get("Misc.CastQCrescendumGap") and spells.QCrescendum:IsReady() then
+		if weapon == Weapons.CRESCENDUM then
+			CastQ(endPos, Enums.HitChance.LOW)
+		elseif offHandWeapon == Weapons.CRESCENDUM then
+			if SwitchWeapon(Weapons.CRESCENDUM) then
+				CastQ(endPos, Enums.HitChance.LOW)
+			end
+		end
+	end
 end
 
 local function OnBuffGain(obj, buffInst)
 	if obj.IsMe then
 		local buff = buffInst.Name
 		if buff then
+
 			-- Main Weapon
 			if buff == "ApheliosCalibrumManager" then
 				weapon = Weapons.CALIBRUM
@@ -846,6 +856,7 @@ local function OnBuffGain(obj, buffInst)
 			elseif buff == "ApheliosOffHandBuffCrescendum" then
 				offHandWeapon = Weapons.CRESCENDUM
 			end
+
 		end
 	end
 end
@@ -870,6 +881,11 @@ local function OnProcessSpell(sender, spell)
 			elseif spellName == "ApheliosCrescendumQ" then
 				spells.QCrescendum.LastUse = Game.GetTime()
 				spells.QCrescendum.CoolDown = Player:GetSpell(SpellSlots.Q).TotalCooldown
+				-- Weapon Switch Reset
+			elseif spellName == "ApheliosW" then
+					-- to be fixed by Thorn
+					Orbwalker.ResetAttack()
+
 			end
 		end
 	end
