@@ -179,7 +179,7 @@ local spells = {
 	}),
 }
 
-local lastTick = 0
+local lastTick = 0;
 local weapon = 0;
 local offHandWeapon = 0;
 
@@ -401,7 +401,7 @@ local function CastQ(target, hitChance)
 			if spells.QInfernum:CastOnHitChance(target, hitChance) then
 				return
 			end
-		elseif weapon == Weapons.CRESCENDUM then
+		elseif weapon == Weapons.CRESCENDUM and target then
 			local targetPos = target:FastPrediction(spells.QCrescendum.Delay)
 			local predPos = Player.Position:Extended(targetPos,spells.QCrescendum.Range)
 			local dist = predPos:Distance(targetPos)
