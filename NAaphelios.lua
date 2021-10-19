@@ -39,7 +39,7 @@ function NAApheliosMenu()
 			Menu.Slider("Combo.CastQCrescendumMinMana", "Crescendum % Min. Mana", 0, 1, 100, 1)
 		end)
 		Menu.Checkbox("Combo.CastR","Cast R",true)
-		Menu.Slider("Combo.CastRHC", "R Hit Chance", 0.60, 0.05, 1, 0.05)
+		Menu.Slider("Combo.CastREnemies", "R Min. Enemies Hit", 2, 1, 5, 1)
 		Menu.Slider("Combo.CastRMinMana", "R % Min. Mana", 0, 1, 100, 1)
 		Menu.Separator()
 		Menu.Checkbox("Combo.CastRSeverum","Cast R Severum on X enemies when % HP (lifesteal)",true)
@@ -80,6 +80,7 @@ function NAApheliosMenu()
 	end)
 	Menu.NewTree("NAApheliosMisc", "Misc.", function ()
 		Menu.Checkbox("Misc.CastQGravitumGap","Auto-Cast Q Gravitum on GapClose",true)
+		Menu.Checkbox("Misc.CastQGravitumAARange","Auto-Cast Q Gravitum on Target out of AA",true)
 		Menu.Checkbox("Misc.CastQCrescendumGap","Auto-Cast Q Crescendum on GapClose",true)
 		Menu.Checkbox("Misc.ForceAACalibrum","Force AA on Calibrum Enemy",true)
 		Menu.Checkbox("Misc.SwitchSeverum","Auto-Switch Severum on % HP",true)
@@ -174,7 +175,8 @@ local spells = {
 		Delay = 0.6,
 		Speed = 2000,
 		Range = 1300,
-		EffectRadius = 300,
+		Radius = 200,
+		EffectRadius = 350,
 		Type = "Linear",
 	}),
 }
@@ -402,7 +404,8 @@ local function CastQ(target, hitChance)
 				return
 			end
 		elseif weapon == Weapons.CRESCENDUM and target then
-			local targetPos = target:FastPrediction(spells.QCrescendum.Delay)
+			local targetAI = target.AsAI
+			local targetPos = targetAI:FastPrediction(spells.QCrescendum.Delay)
 			local predPos = Player.Position:Extended(targetPos,spells.QCrescendum.Range)
 			local dist = predPos:Distance(targetPos)
 			if dist <= hitChance and spells.QCrescendum:Cast(predPos) then
@@ -426,6 +429,32 @@ local function CastR(target, hitChance)
 			return
 		end
 	end
+end
+
+local function CastRCombo()
+	if not spells.R:IsReady() then return end
+
+	local pointsEnemies = {}
+	local myPos = Player.Position
+	local enemies, rRange = ObjManager.GetNearby("enemy", "heroes"), (spells.R.Range + Player.BoundingRadius)
+
+	for handle, obj in pairs(enemies) do
+		local hero = obj.AsHero
+		if hero and hero.IsTargetable then
+			local posEnemy = hero:FastPrediction(spells.R.Delay)
+			local dist = myPos:Distance(hero.Position)
+			if dist <= rRange then
+				table.insert(pointsEnemies, posEnemy)
+			end
+		end
+	end
+
+	local bestPosCombo, hitCountCombo = Geometry.BestCoveringRectangle(pointsEnemies, myPos, spells.R.EffectRadius)
+
+	if bestPosCombo and hitCountCombo >= Menu.Get("Combo.CastREnemies") then
+		spells.R:Cast(bestPosCombo)
+	end
+
 end
 
 local function SwitchWeapon(weapon)
@@ -538,6 +567,30 @@ local function ForceAACalibrum()
 
 end
 
+local function AutoQGravitumAARange()
+
+	if not spells.Q:IsReady() and (offHandWeapon ~= Weapons.GRAVITUM and weapon ~= Weapons.GRAVITUM) then return end
+
+	local enemies, aaRange = ObjManager.GetNearby("enemy", "heroes"), (Player.AttackRange + Player.BoundingRadius)
+
+	for handle, obj in pairs(enemies) do
+		local hero = obj.AsHero
+		if hero and hero.IsTargetable then
+			local dist = Player.Position:Distance(hero.Position)
+
+			if dist > aaRange and HasGravitumBuff(hero) then
+				if weapon == Weapons.GRAVITUM then
+					CastQ()
+				elseif offHandWeapon == Weapons.GRAVITUM then
+					if SwitchWeapon(Weapons.GRAVITUM) then
+						CastQ()
+					end
+				end
+			end
+		end
+	end
+end
+
 local function Waveclear()
 
 	if spells.Q:IsReady() and weapon == Weapons.INFERNUM then
@@ -602,6 +655,9 @@ local function OnHighPriority()
 	end
 	if Menu.Get("Misc.ForceAACalibrum") then
 		ForceAACalibrum()
+	end
+	if Menu.Get("Misc.CastQGravitumAARange") then
+		AutoQGravitumAARange()
 	end
 	if Menu.Get("Misc.SwitchSeverum") and weapon ~= Weapons.SEVERUM 
 		and Player.HealthPercent <= Menu.Get("Misc.SwitchSeverumHP") / 100 then
@@ -686,10 +742,8 @@ local function OnTick()
 		end
 		if Menu.Get("Combo.CastR") then
 			if spells.R:IsReady() then
-				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.R.Range + Player.BoundingRadius, true)
-				if target and ValidTarget(target) and target.Position:Distance(Player.Position) <= (spells.R.Range + Player.BoundingRadius)
-						and Player.Mana >= (Menu.Get("Combo.CastRMinMana") / 100) * Player.MaxMana then
-					CastR(target, Menu.Get("Combo.CastRHC"))
+				if Player.Mana >= (Menu.Get("Combo.CastRMinMana") / 100) * Player.MaxMana then
+					CastRCombo()
 				end
 			end
 		end
