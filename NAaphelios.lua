@@ -703,7 +703,7 @@ local function OnHighPriority()
 		end
 	end
 	-- Auto-Switch Crescendum Close Range
-	if Menu.Get("Misc.AutoSwitchWeaponCrescendum") then
+	if Menu.Get("Misc.AutoSwitchCrescendum") then
 		if offHandWeapon == Weapons.CRESCENDUM then
 			AutoSwitchCrescendum()
 		end
