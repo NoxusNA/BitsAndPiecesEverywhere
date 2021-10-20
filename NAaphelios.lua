@@ -89,6 +89,8 @@ function NAApheliosMenu()
 		Menu.Slider("Misc.CastRKSHC", "R KillSteal Hit Chance", 0.60, 0.05, 1, 0.05)
 		Menu.Separator()
 		Menu.Checkbox("Misc.AutoSwitchWeapon","Auto-Switch Weapon on Q CD",true)
+		Menu.Checkbox("Misc.AutoSwitchCrescendum","Auto-Switch Weapon to Crescendum on close range",true)
+		Menu.Slider("Misc.AutoSwitchCrescendumRange", "Crescendum Close Range", 300, 100, 550, 10)
 	end)
 	Menu.NewTree("NAApheliosDrawing", "Drawing", function ()
 		Menu.Checkbox("Drawing.DrawQ","Draw Q Range",true)
@@ -186,11 +188,11 @@ local weapon = 0;
 local offHandWeapon = 0;
 
 local function ValidMinion(minion)
-	return minion and minion.IsTargetable and minion.MaxHealth > 6 -- check if not plant or shroom
+	return minion and minion.IsTargetable and minion.MaxHealth > 6 and target.IsMinion
 end
 
 local function ValidTarget(target)
-	return target and target.IsTargetable and target.MaxHealth > 6 -- check if not plant or shroom
+	return target and target.IsTargetable and target.MaxHealth > 6  and target.IsHero
 end
 
 local function GameIsAvailable()
@@ -403,13 +405,15 @@ local function CastQ(target, hitChance)
 			if spells.QInfernum:CastOnHitChance(target, hitChance) then
 				return
 			end
-		elseif weapon == Weapons.CRESCENDUM and target then
+		elseif weapon == Weapons.CRESCENDUM and target and ValidTarget(target) then
 			local targetAI = target.AsAI
-			local targetPos = targetAI:FastPrediction(spells.QCrescendum.Delay)
-			local predPos = Player.Position:Extended(targetPos,spells.QCrescendum.Range)
-			local dist = predPos:Distance(targetPos)
-			if dist <= hitChance and spells.QCrescendum:Cast(predPos) then
-				return
+			if targetAI then
+				local targetPos = targetAI:FastPrediction(spells.QCrescendum.Delay)
+				local predPos = Player.Position:Extended(targetPos,spells.QCrescendum.Range)
+				local dist = predPos:Distance(targetPos)
+				if dist <= hitChance and spells.QCrescendum:Cast(predPos) then
+					return
+				end
 			end
 		end
 	end
@@ -519,11 +523,16 @@ local function CastRSeverum()
 	local bestPosSev, hitCountSev = Geometry.BestCoveringRectangle(pointsEnemies, myPos, spells.R.EffectRadius)
 	
 	if bestPosSev and hitCountSev >= Menu.Get("Combo.CastRSeverumEnemies") then
-		if weapon ~= Weapons.SEVERUM then 
-			SwitchWeapon(Weapons.SEVERUM)
-		else 
-			spells.R:Cast(bestPosSev)
-			return
+		if weapon ~= Weapons.SEVERUM and offHandWeapon == Weapons.SEVERUM then
+			if SwitchWeapon(Weapons.SEVERUM) then
+				spells.R:Cast(bestPosSev)
+				return
+			end
+		else
+			if weapon == Weapons.SEVERUM then
+				spells.R:Cast(bestPosSev)
+				return
+			end
 		end
 	end
 	
@@ -589,6 +598,25 @@ local function AutoQGravitumAARange()
 			end
 		end
 	end
+end
+
+local function AutoSwitchCrescendum()
+
+	local enemies, menuRange = ObjManager.GetNearby("enemy", "heroes"), Menu.Get("Misc.AutoSwitchCrescendumRange")
+
+	for handle, obj in pairs(enemies) do
+		local hero = obj.AsHero
+		if hero and hero.IsTargetable then
+			local dist = Player.Position:Distance(hero.Position)
+
+			if dist <= menuRange then
+				if offHandWeapon == Weapons.CRESCENDUM then
+					SwitchWeapon(Weapons.CRESCENDUM)
+				end
+			end
+		end
+	end
+
 end
 
 local function Waveclear()
@@ -669,8 +697,15 @@ local function OnHighPriority()
 	-- Auto-Switch Weapon
 	if Menu.Get("Misc.AutoSwitchWeapon") then
 		-- IsLearned not working apparently, using level then
-		if Player.Level > 1 and not spells.Q:IsReady() and spells.Q:GetManaCost() <= Player.Mana then
+		if Player.Level > 1 and (not spells.Q:IsReady() or not spells.Q:GetState() == SpellStates.Disabled)
+				and spells.Q:GetManaCost() <= Player.Mana then
 			AutoSwitchWeapon()
+		end
+	end
+	-- Auto-Switch Crescendum Close Range
+	if Menu.Get("Misc.AutoSwitchWeaponCrescendum") then
+		if offHandWeapon == Weapons.CRESCENDUM then
+			AutoSwitchCrescendum()
 		end
 	end
 
