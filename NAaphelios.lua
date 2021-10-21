@@ -188,7 +188,7 @@ local weapon = 0;
 local offHandWeapon = 0;
 
 local function ValidMinion(minion)
-	return minion and minion.IsTargetable and minion.MaxHealth > 6 and target.IsMinion
+	return minion and minion.IsTargetable and minion.MaxHealth > 6 and minion.IsMinion
 end
 
 local function ValidTarget(target)
@@ -697,7 +697,9 @@ local function OnHighPriority()
 	-- Auto-Switch Weapon
 	if Menu.Get("Misc.AutoSwitchWeapon") then
 		-- IsLearned not working apparently, using level then
-		if Player.Level > 1 and (not spells.Q:IsReady() or not spells.Q:GetState() == SpellStates.Disabled)
+		--spells.Q:GetState() == SpellStates.Disabled -- to be fixed, wrong val
+
+		if Player.Level > 1 and (not (spells.Q:GetState() == 520) and not (spells.Q:GetState() == SpellStates.Ready))
 				and spells.Q:GetManaCost() <= Player.Mana then
 			AutoSwitchWeapon()
 		end
@@ -718,7 +720,7 @@ local function OnTick()
 
 	-- Combo
 	if Orbwalker.GetMode() == "Combo" then
-	
+
 		if Menu.Get("Combo.CastRSeverum") and (weapon == Weapons.SEVERUM or offHandWeapon == Weapons.SEVERUM) then
 			if spells.R:IsReady() then
 				if Player.Health <= (Menu.Get("Combo.CastRSeverumHP") / 100) * Player.MaxHealth then
