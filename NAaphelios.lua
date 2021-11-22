@@ -676,7 +676,7 @@ end
 local function OnHighPriority()
 
 	if not GameIsAvailable() then return end
-	--if not Orbwalker.CanCast() then return end
+	if not Orbwalker.CanCast() then return end
 
 	if Menu.Get("Misc.CastRKS") then
 		AutoRKS(Menu.Get("Misc.CastRKSHC"))
@@ -716,7 +716,7 @@ end
 local function OnTick()
 
 	if not GameIsAvailable() then return end
-	--if not Orbwalker.CanCast() then return end
+	if not Orbwalker.CanCast() then return end
 
 	-- Combo
 	if Orbwalker.GetMode() == "Combo" then
