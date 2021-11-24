@@ -15,7 +15,6 @@ local DamageLib = _G.Libs.DamageLib
 
 TS = _G.Libs.TargetSelector(Orbwalker.Menu)
 
---buffs
 --akshanpassivemovementspeed
 --AkshanPassiveDebuff
 
@@ -34,6 +33,10 @@ function NAAkshanMenu()
 		Menu.Slider("Combo.CastEMinMana", "E % Min. Mana", 0, 1, 100, 1)
 		Menu.Checkbox("Combo.CastR","Cast R",true)
 		Menu.Slider("Combo.CastRMinMana", "R % Min. Mana", 0, 1, 100, 1)
+		Menu.Separator()
+		Menu.Dropdown("Combo.CastIgnite", "Smart Ignite Mode", 3, {"Disabled", "HighestLifeSteal/SpellVamp",
+																  "AfterPressTheAttack", "HealthPercentage"})
+		Menu.Slider("Combo.CastIgniteHP", "% HP For HealthPercentage Mode ", 50, 1, 100, 1)
 	end)
 	Menu.NewTree("NAAkshanHarass", "Harass", function ()
 		Menu.Checkbox("Harass.CastQ","Cast Q",true)
@@ -58,6 +61,7 @@ function NAAkshanMenu()
 		Menu.Slider("Misc.CastRKSRange", "R Min. Distance from Enemies", 1000, 200, 1500, 50)
 		Menu.Checkbox("Misc.CastEBuff","Cast E Only if Enemy Has Akshan Mark",true)
 		Menu.Checkbox("Misc.UseMovSpeedPassive","Prioritize Movement Speed for Passive AA",true)
+		Menu.Checkbox("Misc.CastEGapClose","Auto-Cast E on GapClose",false)
 	end)
 	Menu.NewTree("NAAkshanDrawing", "Drawing", function ()
 		Menu.Checkbox("Drawing.DrawQ","Draw Q Range",true)
@@ -71,6 +75,15 @@ function NAAkshanMenu()
 end
 
 Menu.RegisterMenu("NAAkshan","NAAkshan",NAAkshanMenu)
+
+local function GetIgniteSlot()
+	for i=SpellSlots.Summoner1, SpellSlots.Summoner2 do
+		if Player:GetSpell(i).Name:lower():find("summonerdot") then
+			return i
+		end
+	end
+	return SpellSlots.Unknown
+end
 
 -- Global vars
 local spells = {
@@ -115,6 +128,11 @@ local spells = {
 		Range = 2500,
 		Radius = 120,
 	}),
+	Ign = Spell.Targeted({
+		Slot = GetIgniteSlot(),
+		Delay = 0,
+		Range = 600,
+	}),
 }
 
 local function ValidMinion(minion)
@@ -156,6 +174,14 @@ end
 
 local function HasAkshanPassiveDebuff(target)
 	return target:GetBuff("AkshanPassiveDebuff")
+end
+
+local function HasPerkPressTheAttack()
+	return Player:HasPerk(Enums.PerkIDs.PressTheAttack)
+end
+
+local function HasPressTheAttackAmpDmg(target)
+	return target:GetBuff("ASSETS/Perks/Styles/Precision/PressTheAttack/PressTheAttackDamageAmp.lua")
 end
 
 local function BestWallForRange(eRange, targetPos)
@@ -340,6 +366,10 @@ local function GetRDmg(target)
 	return DamageLib.CalculatePhysicalDamage(Player, target, totalDmg)
 end
 
+local function GetIgniteDmg(target)
+	return 50 + 20 * Player.Level - target.HealthRegen * 2.5
+end
+
 local function GetDamage(target)
 	local totalDmg = 0
 	if spells.Q:IsReady() then
@@ -350,6 +380,9 @@ local function GetDamage(target)
 	end
 	if spells.R:IsReady() then
 		totalDmg = totalDmg + GetRDmg(target)
+	end
+	if spells.Ign:IsReady() then
+		totalDmg = totalDmg + GetIgniteDmg(target)
 	end
 
 	return totalDmg
@@ -422,6 +455,14 @@ local function CastR(target)
 	end
 end
 
+local function CastIgnite(target)
+	if spells.Ign:IsReady() then
+		if spells.Ign:Cast(target) then
+			return
+		end
+	end
+end
+
 local function AutoWRiver()
 	if not spells.W:IsReady() then return end
 	if Player.IsInRiver and not IsCamouflaged() then
@@ -446,6 +487,74 @@ local function AutoRKS(range)
 				CastR(hero) -- R KS
 			end
 		end
+	end
+end
+
+local function SmartIgnite(mode)
+
+	local enemies, ignRange = ObjManager.GetNearby("enemy", "heroes"), (spells.Ign.Range + Player.BoundingRadius)
+	local selectedIgnHero = nil
+
+	-- Mode HighestLifeSteal/SpellVamp
+	if mode == 1 then
+
+		for _, obj in pairs(enemies) do
+			local hero = obj.AsHero
+			if hero and hero.IsTargetable then
+				local dist = Player.Position:Distance(hero.Position)
+				if dist <= ignRange then
+					if selectedIgnHero then
+						local heroLifeSteal = hero.PercentLifeStealMod
+						local selectedHeroLifeSteal = selectedIgnHero.PercentLifeStealMod
+						local heroSpellVamp = hero.PercentSpellVampMod
+						local selectedHeroSpellVamp = selectedIgnHero.PercentSpellVampMod
+						if (heroLifeSteal > selectedHeroLifeSteal and heroLifeSteal > selectedHeroSpellVamp) or
+								(heroSpellVamp > selectedHeroLifeSteal and heroSpellVamp > selectedHeroSpellVamp) then
+							selectedIgnHero = hero
+						end
+					else
+						selectedIgnHero = hero
+					end
+				end
+			end
+		end
+
+		-- Mode AfterPressTheAttack
+	elseif mode == 2 and HasPerkPressTheAttack() then
+
+		for _, obj in pairs(enemies) do
+			local hero = obj.AsHero
+			if hero and hero.IsTargetable then
+				local dist = Player.Position:Distance(hero.Position)
+				if dist <= ignRange then
+					if HasPressTheAttackAmpDmg(hero) then
+						selectedIgnHero = hero
+					end
+				end
+			end
+		end
+
+		-- Mode HealthPercentage
+	elseif mode == 3 then
+		for _, obj in pairs(enemies) do
+			local hero = obj.AsHero
+			if hero and hero.IsTargetable then
+				local dist = Player.Position:Distance(hero.Position)
+				if dist <= ignRange then
+					local heroHP = HealthPred.GetHealthPrediction(hero, spells.Ign.Delay)
+					local menuHP = (Menu.Get("Combo.CastIgniteHP") / 100) * Player.MaxHealth
+					if heroHP <= menuHP then
+						selectedIgnHero = hero
+					end
+				end
+			end
+		end
+
+	end
+
+	if selectedIgnHero then
+		CastIgnite(selectedIgnHero)
+		return
 	end
 end
 
@@ -535,6 +644,14 @@ local function OnTick()
 
 	-- Combo
 	if Orbwalker.GetMode() == "Combo" then
+		local modeIgn = Menu.Get("Combo.CastIgnite")
+		if modeIgn > 0 then
+			if spells.Ign.Slot ~= SpellSlots.Unknown then
+				if spells.Ign:IsReady() then
+					SmartIgnite(modeIgn)
+				end
+			end
+		end
 		if Menu.Get("Combo.CastQ") then
 			if spells.Q:IsReady() then
 				local target = Orbwalker.GetTarget() or TS:GetTarget(spells.Q.Range + Player.BoundingRadius, true)
@@ -646,26 +763,8 @@ local function OnGapclose(source, dash)
 	local pDist = pPos:Distance(endPos)
 	if pDist > 400 or pDist > pPos:Distance(dash.StartPos) or not source:IsFacing(pPos) then return end
 
-	--if Menu.Get("Misc.CastWGap") and spells.W:IsReady() then
-	--	Input.Cast(SpellSlots.W)
-	--end
-end
-
-local function OnBuffGain(obj, buffInst)
-	if obj.IsMe then
-		local buff = buffInst.Name
-		if buff then
-			--print("buffG: ", buff)
-		end
-	end
-end
-
-local function OnBuffLost(obj, buffInst)
-	if obj.IsMe then
-		local buff = buffInst.Name
-		if buff then
-			--print("buffL: ", buff)
-		end
+	if Menu.Get("Misc.CastEGapClose") and spells.W:IsReady() then
+		CastE(source.AsHero)
 	end
 end
 
@@ -682,8 +781,6 @@ function OnLoad()
 	EventManager.RegisterCallback(Enums.Events.OnDraw, OnDraw)
 	EventManager.RegisterCallback(Enums.Events.OnDrawDamage, OnDrawDamage)
 	EventManager.RegisterCallback(Enums.Events.OnGapclose, OnGapclose)
-	EventManager.RegisterCallback(Enums.Events.OnBuffGain, OnBuffGain)
-	EventManager.RegisterCallback(Enums.Events.OnBuffLost, OnBuffLost)
 	EventManager.RegisterCallback(Enums.Events.OnPreAttack, OnPreAttack)
 
 	return true
