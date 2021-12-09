@@ -22,46 +22,50 @@ TS = _G.Libs.TargetSelector(Orbwalker.Menu)
 local Menu = _G.Libs.NewMenu
 
 function NAAkshanMenu()
-	Menu.NewTree("NAAkshanCombo", "Combo", function ()
-		Menu.Checkbox("Combo.CastQ","Cast Q",true)
-		Menu.Slider("Combo.CastQHC", "Q Hit Chance", 0.60, 0.05, 1, 0.05)
-		Menu.Slider("Combo.CastQMinMana", "Q % Min. Mana", 0, 1, 100, 1)
-		Menu.Checkbox("Combo.CastW","Cast W",false)
-		Menu.Slider("Combo.CastWMinMana", "W % Min. Mana", 0, 1, 100, 1)
-		Menu.Checkbox("Combo.CastE","Cast E",true)
-		Menu.Slider("Combo.CastERange","Cast E If no Max Wall Range found", 600, 200, 750, 50)
-		Menu.Slider("Combo.CastEMinMana", "E % Min. Mana", 0, 1, 100, 1)
-		Menu.Checkbox("Combo.CastR","Cast R",true)
-		Menu.Slider("Combo.CastRMinMana", "R % Min. Mana", 0, 1, 100, 1)
-		Menu.Separator()
-		Menu.Dropdown("Combo.CastIgnite", "Smart Ignite Mode", 3, {"Disabled", "HighestLifeSteal/SpellVamp",
-																  "AfterPressTheAttack", "HealthPercentage"})
-		Menu.Slider("Combo.CastIgniteHP", "% HP For HealthPercentage Mode ", 50, 1, 100, 1)
-	end)
-	Menu.NewTree("NAAkshanHarass", "Harass", function ()
-		Menu.Checkbox("Harass.CastQ","Cast Q",true)
-		Menu.Checkbox("Harass.CastQMinion","Cast Q Check for Minions",true)
-		Menu.Slider("Harass.CastQHC", "Q Hit Chance", 0.60, 0.05, 1, 0.05)
-		Menu.Slider("Harass.CastQMinMana", "Q % Min. Mana", 0, 1, 100, 1)
-	end)
-	Menu.NewTree("NAAkshanWave", "Waveclear", function ()
-		Menu.ColoredText("Wave", 0xFFD700FF, true)
-		Menu.Checkbox("Waveclear.CastQ","Cast Q for Killable CS",true)
-		Menu.Slider("Waveclear.CastQHC", "Q Min. Killable Count",  1, 0, 10, 1)
-		Menu.Slider("Waveclear.CastQMinMana", "Q % Min. Mana", 0, 1, 100, 1)
-		Menu.Separator()
-		Menu.ColoredText("Jungle", 0xFFD700FF, true)
-		Menu.Checkbox("Waveclear.CastQJg","Cast Q",true)
-		Menu.Slider("Waveclear.CastQHCJg", "Q Min. Hit Count",  1, 0, 10, 1)
-		Menu.Slider("Waveclear.CastQMinManaJg", "Q % Min. Mana", 0, 1, 100, 1)
-	end)
-	Menu.NewTree("NAAkshanMisc", "Misc.", function ()
-		Menu.Checkbox("Misc.CastWRiver","Auto-Cast W in River",true)
-		Menu.Checkbox("Misc.CastRKS","Auto-Cast R if Killable",true)
-		Menu.Slider("Misc.CastRKSRange", "R Min. Distance from Enemies", 1000, 200, 1500, 50)
-		Menu.Checkbox("Misc.CastEBuff","Cast E Only if Enemy Has Akshan Mark",true)
-		Menu.Checkbox("Misc.UseMovSpeedPassive","Prioritize Movement Speed for Passive AA",true)
-		Menu.Checkbox("Misc.CastEGapClose","Auto-Cast E on GapClose",false)
+	Menu.ColumnLayout("MenuAkshan", "Akshan Menu",2, false, function() 
+		Menu.NewTree("NAAkshanCombo", "Combo", function ()
+			Menu.Checkbox("Combo.CastQ","Cast Q",true)
+			Menu.Slider("Combo.CastQHC", "Q Hit Chance", 0.60, 0.05, 1, 0.05)
+			Menu.Slider("Combo.CastQMinMana", "Q % Min. Mana", 0, 1, 100, 1)
+			Menu.Checkbox("Combo.CastW","Cast W",false)
+			Menu.Slider("Combo.CastWMinMana", "W % Min. Mana", 0, 1, 100, 1)
+			Menu.Checkbox("Combo.CastE","Cast E",true)
+			Menu.Slider("Combo.CastERange","Cast E If no Max Wall Range found", 600, 200, 750, 50)
+			Menu.Slider("Combo.CastEMinMana", "E % Min. Mana", 0, 1, 100, 1)
+			Menu.Checkbox("Combo.CastR","Cast R",true)
+			Menu.Slider("Combo.CastRMinMana", "R % Min. Mana", 0, 1, 100, 1)
+			Menu.Separator()
+			Menu.Dropdown("Combo.CastIgnite", "Smart Ignite Mode", 3, {"Disabled", "HighestLifeSteal/SpellVamp",
+																	  "AfterPressTheAttack", "HealthPercentage"})
+			Menu.Slider("Combo.CastIgniteHP", "% HP For HealthPercentage Mode ", 50, 1, 100, 1)
+		end)
+
+		Menu.NewTree("NAAkshanWave", "Waveclear", function ()
+			Menu.ColoredText("Wave", 0xFFD700FF, true)
+			Menu.Checkbox("Waveclear.CastQ","Cast Q for Killable CS",true)
+			Menu.Slider("Waveclear.CastQHC", "Q Min. Killable Count",  1, 0, 10, 1)
+			Menu.Slider("Waveclear.CastQMinMana", "Q % Min. Mana", 0, 1, 100, 1)
+			Menu.Separator()
+			Menu.ColoredText("Jungle", 0xFFD700FF, true)
+			Menu.Checkbox("Waveclear.CastQJg","Cast Q",true)
+			Menu.Slider("Waveclear.CastQHCJg", "Q Min. Hit Count",  1, 0, 10, 1)
+			Menu.Slider("Waveclear.CastQMinManaJg", "Q % Min. Mana", 0, 1, 100, 1)
+		end)
+		Menu.NextColumn()
+			Menu.NewTree("NAAkshanHarass", "Harass", function ()
+			Menu.Checkbox("Harass.CastQ","Cast Q",true)
+			Menu.Checkbox("Harass.CastQMinion","Cast Q Check for Minions",true)
+			Menu.Slider("Harass.CastQHC", "Q Hit Chance", 0.60, 0.05, 1, 0.05)
+			Menu.Slider("Harass.CastQMinMana", "Q % Min. Mana", 0, 1, 100, 1)
+		end)
+		Menu.NewTree("NAAkshanMisc", "Misc.", function ()
+			Menu.Checkbox("Misc.CastWRiver","Auto-Cast W in River",true)
+			Menu.Checkbox("Misc.CastRKS","Auto-Cast R if Killable",true)
+			Menu.Slider("Misc.CastRKSRange", "R Min. Distance from Enemies", 1000, 200, 1500, 50)
+			Menu.Checkbox("Misc.CastEBuff","Cast E Only if Enemy Has Akshan Mark",true)
+			Menu.Checkbox("Misc.UseMovSpeedPassive","Prioritize Movement Speed for Passive AA",true)
+			Menu.Checkbox("Misc.CastEGapClose","Auto-Cast E on GapClose",false)
+		end)
 	end)
 	Menu.NewTree("NAAkshanDrawing", "Drawing", function ()
 		Menu.Checkbox("Drawing.DrawQ","Draw Q Range",true)
@@ -345,6 +349,9 @@ local function GetRDmg(target)
 	local dmgR = 15 + 5 * Player:GetSpell(SpellSlots.R).Level
 	local bonusDmg = 0.10 * playerAI.TotalAD
 	local totalDmg = (dmgR + bonusDmg) * (4 + 1 * Player:GetSpell(SpellSlots.R).Level)
+
+	local increaseDmg = (target.HealthPercent * 100 * 0.03) * totalDmg
+	totalDmg = totalDmg + increaseDmg
 
 	if HasPerkDarkHarvest() and target.HealthPercent < 0.5 then
 		-- 50% of their maximum health deal 20 − 60 (based on level) (+ 5 per Soul) (+ 25% bonus AD) (+ 15% AP)
@@ -774,6 +781,24 @@ local function OnPreAttack(args)
 	end
 end
 
+local function OnBuffGain(obj, buffInst)
+	if obj.IsHero and obj.IsEnemy then
+		local buff = buffInst.Name
+		if buff then
+			INFO("buffG: %s", buff)
+		end
+	end
+end
+
+local function OnBuffLost(obj, buffInst)
+	if obj.IsHero and obj.IsEnemy then
+		local buff = buffInst.Name
+		if buff then
+			INFO("buffL: %s", buff)
+		end
+	end
+end
+
 function OnLoad()
 
 	EventManager.RegisterCallback(Enums.Events.OnHighPriority, OnHighPriority)
@@ -782,6 +807,8 @@ function OnLoad()
 	EventManager.RegisterCallback(Enums.Events.OnDrawDamage, OnDrawDamage)
 	EventManager.RegisterCallback(Enums.Events.OnGapclose, OnGapclose)
 	EventManager.RegisterCallback(Enums.Events.OnPreAttack, OnPreAttack)
+	EventManager.RegisterCallback(Enums.Events.OnBuffGain, OnBuffGain)
+	EventManager.RegisterCallback(Enums.Events.OnBuffLost, OnBuffLost)
 
 	return true
 end
